@@ -1,0 +1,72 @@
+from __future__ import print_function
+from ortools.linear_solver import pywraplp
+
+def YNetwork(v1, v2):
+  # Instantiate a Glop solver, naming it Y-Netowrk.
+  solver = pywraplp.Solver('Y-Network',
+                           pywraplp.Solver.GLOP_LINEAR_PROGRAMMING)
+
+# Create the two variables and let them take on any value.
+  R1 = solver.NumVar(0, solver.infinity(), 'R1')
+  R2 = solver.NumVar(0, solver.infinity(), 'R2')
+  k1 = solver.NumVar(0, solver.infinity(), 'k1')
+  k2 = solver.NumVar(0, solver.infinity(), 'k2')
+  k3 = solver.NumVar(0, solver.infinity(), 'k3')
+  d1, de1 = 0.2, 0.05
+  d2, de2 = 0.3, 0.05
+  d3, de3 = 0.25, 0.05
+
+  c1 = solver.Constraint(0, solver.infinity())
+  c1.SetCoefficient(k1, 1)
+  c1.SetCoefficient(R1, -(1-de1)/(1-d1*de1))
+
+  c2 = solver.Constraint(0, solver.infinity())
+  c2.SetCoefficient(k2, 1)
+  c2.SetCoefficient(R2, -(1-de2)/(1-d2*de2))
+
+  c3 = solver.Constraint(0, solver.infinity())
+  c3.SetCoefficient(k3, 1)
+  c3.SetCoefficient(R1, -(1-de3)/(1-d3*de3))
+  c3.SetCoefficient(R2, -(1-de3)/(1-d3*de3))
+
+  c4 = solver.Constraint(-solver.infinity(), 1)
+  c4.SetCoefficient(k1, 1/((1-d1)*de1))
+  c4.SetCoefficient(R1, 1/(1-d1))
+
+  c5 = solver.Constraint(-solver.infinity(), 1)
+  c5.SetCoefficient(k2, 1/((1-d2)*de2))
+  c5.SetCoefficient(R2, 1/(1-d2))
+
+  c6 = solver.Constraint(-solver.infinity(), 1)
+  c6.SetCoefficient(k3, 1/((1-d3)*de3))
+  c6.SetCoefficient(R2, 1/(1-d3))
+  c6.SetCoefficient(R1, 1/(1-d3))
+
+  c7 = solver.Constraint(-solver.infinity(), 0)
+  c7.SetCoefficient(k3, 1)
+  c7.SetCoefficient(k2, -(1-d3)*de3/(de2*(1-d3*de3)))
+  c7.SetCoefficient(k1, -(1-d3)*de3/(de1*(1-d3*de3)))
+  
+  objective = solver.Objective()
+  objective.SetCoefficient(R1, v1)
+  objective.SetCoefficient(R2, v2)
+  objective.SetMaximization()
+
+
+  print(solver.RowConstraint().GetCoefficient(k1))
+  # Solve the system.
+  solver.Solve()
+  opt_solution = R1.solution_value() + R2.solution_value()
+  # print('Number of variables =', solver.NumVariables())
+  # print('Number of constraints =', solver.NumConstraints())
+  # The value of each variable in the solution.
+  # print('Solution:')
+  # print('R1 = ', R1.solution_value())
+  # print('R2 = ', R2.solution_value())
+  # The objective value of the solution.
+  # print('Optimal objective value =', opt_solution)
+  return R1.solution_value(), R2.solution_value()
+
+if __name__ == '__main__':
+  print(YNetwork(2, 1))
+  print(YNetwork(1, 2))
