@@ -143,7 +143,7 @@ class SolverLP:
                     out += (' + ' if plus else '') + self.E[s_u].name()
                     plus = True
                 DEBUG(out)
-        DEBUG('--Summation of R from source--')
+        DEBUG('--Summation of R_u from source--')
         for u in range(self.nodes):
             if u not in self.source:
                 mp = ('Sum_R_u', u)
@@ -159,6 +159,22 @@ class SolverLP:
                     out += (' + ' if plus else '') + self.R[s_u].name()
                     plus = True
                 DEBUG(out)
+        DEBUG('--Summation of R_e from source--')
+        for u, v, d, r in self.edges:
+            edge = (u, v)
+            mp = ('Sum_R_e', edge)
+            self.constraints[mp] = self.solver.Constraint(0, 0)
+            self.constraints[mp].SetCoefficient(self.R[edge], 1)
+            plus = False
+            out = self.R[edge].name() + ' = '
+            for w in self.source:
+                s_e = (w, 'to', edge)
+                nm = 'R_('+str(w)+' to '+str(edge)+')'
+                self.R[s_e] = self.solver.NumVar(0, INF, nm)
+                self.constraints[mp].SetCoefficient(self.R[s_e], -1)
+                out += (' + ' if plus else '') + self.R[s_e].name()
+                plus = True
+            DEBUG(out)
 
     def createFlowConstraint(self):
         INF = self.solver.infinity()
@@ -253,6 +269,66 @@ class SolverLP:
                             out += (' + ' if plus else '') + self.f_k[key].name()
                             plus = True
                     DEBUG(out)
+        
+        DEBUG('--Flow_R in == Flow_R out--')
+        for s, d in self.s_to_d:
+            for n in range(self.nodes):
+                    # s to d through n
+                if n != s and n != d:
+                    flow = ('Flow_R_in_out', s, d, n)
+                    self.constraints[flow] = self.solver.Constraint(0, 0)
+                    out = ''
+                    plus = False
+                    # IN
+                    if n in self.reverse_graph:
+                        for u, de, re, i in self.reverse_graph[n]:
+                            edge = (u, n)
+                            key = (s, d, edge)
+                            nm = 'f_R('+str(s)+' to '+str(d)+','+str(edge)+')'
+                            if key not in self.f_R:
+                                self.f_R[key] = self.solver.NumVar(0, INF, nm)
+                            self.constraints[flow].SetCoefficient(self.f_R[key], 1)
+                            out += (' + ' if plus else '') + self.f_R[key].name()
+                            plus = True
+                    # OUT
+                    if n in self.graph:
+                        for v, de, re, i in self.graph[n]:
+                            edge = (n, v)
+                            key = (s, d, edge)
+                            nm = 'f_R('+str(s)+' to '+str(d)+','+str(edge)+')'
+                            if key not in self.f_R:
+                                self.f_R[key] = self.solver.NumVar(0, INF, nm)
+                            self.constraints[flow].SetCoefficient(self.f_R[key], -1)
+                            out += ' - ' + self.f_R[key].name()
+                    out += ' = 0'
+                    DEBUG(out)
+
+        # Flow Capacity
+        DEBUG('--Flow_R capacity--')
+        to = dict()
+        for s, d in self.s_to_d:
+            if s not in to:
+                to[s] = [d]
+            else:
+                to[s].append(d)
+        for s in self.source:
+            for u, v, de, re in self.edges:
+                edge = (u, v)
+                mp = ('Flow_R_Cap', s, edge)
+                self.constraints[mp] = self.solver.Constraint(-INF, 0)
+                out = ''
+                plus = False
+                for d in to[s]:
+                    key = (s, d, edge)
+                    self.constraints[mp].SetCoefficient(self.f_R[key], 1)
+                    out += (' + ' if plus else '') + self.f_R[key].name()
+                    plus = True
+                s_e = (s, 'to', edge)
+                self.constraints[mp].SetCoefficient(self.R[s_e], -1)
+                out += ' <= ' + self.R[s_e].name()
+                DEBUG(out)
+
+
 
     def createConstraints(self):
         self.createSecurityConstraint()
