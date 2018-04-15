@@ -270,6 +270,7 @@ class SolverLP:
                             plus = True
                     DEBUG(out)
         
+        # Flow_R in == Flow_R out
         DEBUG('--Flow_R in == Flow_R out--')
         for s, d in self.s_to_d:
             for n in range(self.nodes):
@@ -303,7 +304,7 @@ class SolverLP:
                     out += ' = 0'
                     DEBUG(out)
 
-        # Flow Capacity
+        # Flow_R Capacity
         DEBUG('--Flow_R capacity--')
         to = dict()
         for s, d in self.s_to_d:
@@ -327,18 +328,67 @@ class SolverLP:
                 self.constraints[mp].SetCoefficient(self.R[s_e], -1)
                 out += ' <= ' + self.R[s_e].name()
                 DEBUG(out)
-
+        
+        # Limit_R of Flow
+        DEBUG('--Limit flow_R--')
+        for s in self.source:
+            mp = ('LM_Flow_R', s)
+            self.constraints[mp] = self.solver.Constraint(-INF, 0)
+            self.constraints[mp].SetCoefficient(self.R[s], -1)
+            out = ''
+            plus = False
+            for d in to[s]:
+                for v, de, re, i in self.graph[s]:
+                    edge = (s, v)
+                    key = (s, d, edge)
+                    self.constraints[mp].SetCoefficient(self.f_R[key], 1)
+                    out += (' + ' if plus else '') + self.f_R[key].name()
+                    plus = True
+            out += ' <= ' + self.R[s].name()
+            DEBUG(out)
+        
+        # Limit of R from Source i
+        DEBUG('--Limit messages--')
+        for u in range(self.nodes):
+            if u not in self.source:
+                for s in self.source:
+                    s_u = (s, 'to', u)
+                    mp = ('LM_R_bits', s_u)
+                    self.constraints[mp] = self.solver.Constraint(-INF, 0)
+                    self.constraints[mp].SetCoefficient(self.R[s_u], 1)
+                    out = self.R[s_u].name() + ' <= '
+                    plus = False
+                    for d in to[s]:
+                        for v, de, re, i in self.reverse_graph[u]:
+                            edge = (v, u)
+                            key = (s, d, edge)
+                            self.constraints[mp].SetCoefficient(self.f_R[key], -1)
+                            out += (' + ' if plus else '') + self.f_R[key].name()
+                            plus = True
+                    DEBUG(out)
 
 
     def createConstraints(self):
         self.createSecurityConstraint()
         self.createFlowConstraint()
     
+    def createObjective(self):
+        self.objective = self.solver.Objective()
+        for u in self.destination:
+            self.objective.SetCoefficient(self.R[u], 1)
+        self.objective.SetMaximization()
+
     def Solve(self):
         self.createVariables()
         self.createConstraints()
-        self.objective = self.solver.Objective()
         DEBUG(self.solver.NumConstraints())
+        self.createObjective()
+        self.solver.Solve()
+        opt_sol = 0
+        for u in self.destination:
+            opt_sol += self.R[u].solution_value()
+        DEBUG(opt_sol)
+        return opt_sol
 
 
 def main():
