@@ -1,14 +1,30 @@
 from __future__ import print_function
 from ortools.linear_solver import pywraplp
+from pprint import pprint
+from sys import argv
+
+def show(num):
+    return "{:.3f}".format(num)
+
+def DEBUG(text):
+    if len(argv) > 1:
+        if argv[1] == 'debug':
+            print(text)
 
 class SolverLP:
 
     solver = pywraplp.Solver('Network', pywraplp.Solver.GLOP_LINEAR_PROGRAMMING)
+    
+    # Constraints
     constraints = dict()
+
+    # Variables
     R = dict() # Messages in nodes
     k = dict() # Random bits k (on edges)
     e = dict() # Random bits e (on edges)
     E = dict() # Random bits in nodes
+    f_k = dict() # Flow of Keys
+    f_R = dict() # Flow of Messages
 
     def __init__(self, nodes, num_edges, edges, source, destination, graph, reverse_graph, s_to_d):
         self.nodes = nodes
@@ -39,6 +55,8 @@ class SolverLP:
 
     def createSecurityConstraint(self):
         INF = self.solver.infinity()
+        DEBUG("==== Constraint on edges ====")
+        DEBUG('--Key--')
         for u, v, d, r in self.edges:
             edge = (u, v)
             # Constraint 1 Random bits for generate Key
@@ -47,20 +65,33 @@ class SolverLP:
             self.constraints[mp].SetCoefficient(self.k[edge], 1-d*r)
             self.constraints[mp].SetCoefficient(self.e[edge], (1-d)*r)
             self.constraints[mp].SetCoefficient(self.R[edge], -(1-r))
-
+            DEBUG(show(1-d*r) + ' ' + self.k[edge].name() + ' + ' +
+                  show((1-d)*r) + ' ' + self.e[edge].name() + ' >= ' +
+                  show((1-r)) + ' ' + self.R[edge].name() )
+        DEBUG('--Capacity--')
+        for u, v, d, r in self.edges:
+            edge = (u, v)
             # Constraint 2 Capacity
             mp = ('Cap', edge)
             self.constraints[mp] = self.solver.Constraint(-INF, 1-d)
             self.constraints[mp].SetCoefficient(self.R[edge], 1)
             self.constraints[mp].SetCoefficient(self.k[edge], 1/r)
             self.constraints[mp].SetCoefficient(self.e[edge], 1)
-
+            # print('--Capacity--')
+            DEBUG(show(1) + ' ' + self.R[edge].name() + ' + ' +
+                  show(1/r) + ' ' + self.k[edge].name() + ' + ' +
+                  show(1) + ' ' + self.e[edge].name() + ' <= ' + show(1-d))
+        DEBUG('--Limit of random bits--')
+        for u, v, d, r in self.edges:
+            edge = (u, v)
             # Constraint 3 u has random bits for sending
             mp = ('LM', edge)
             self.constraints[mp] = self.solver.Constraint(-INF, 0)
             self.constraints[mp].SetCoefficient(self.k[edge], 1-d*r)
             self.constraints[mp].SetCoefficient(self.E[u], -(1-d)*r)
             self.constraints[mp].SetCoefficient(self.e[edge], (1-d)*r)
+            DEBUG(show(1-d*r) + ' ' + self.k[edge].name() + ' <= ' +
+                  show((1-d)*r) + ' ' + '(' + self.E[u].name() + ' - ' + self.e[edge].name() + ')')
 
             # Constraint 4 Sum e_e = Sum e_e from Si
             mp = ('Sum_e_e', edge)
@@ -68,7 +99,7 @@ class SolverLP:
             self.constraints[mp].SetCoefficient(self.e[edge], 1)
             for w in self.source:
                 s_e = (w, 'to', edge)
-                nm = 'E_('+str(w)+' to ('+str(edge)+'))'
+                nm = 'E_('+str(w)+' to '+str(edge)+')'
                 self.e[s_e] = self.solver.NumVar(0, INF, nm)
                 self.constraints[mp].SetCoefficient(self.e[s_e], -1)
 
@@ -78,10 +109,10 @@ class SolverLP:
             self.constraints[mp].SetCoefficient(self.k[edge], 1)
             for w in self.source:
                 s_e = (w, 'to', edge)
-                nm = 'k_('+str(w)+' to ('+str(edge)+'))'
+                nm = 'k_('+str(w)+' to '+str(edge)+')'
                 self.k[s_e] = self.solver.NumVar(0, INF, nm)
                 self.constraints[mp].SetCoefficient(self.k[s_e], -1)
-
+        """
         for u in range(self.nodes):
             if u not in self.source:
                 # Constraint 6 Eu = Sum Eu from Si
@@ -93,9 +124,61 @@ class SolverLP:
                     nm = 'E_('+str(s)+' to '+str(u)+')'
                     self.E[s_u] = self.solver.NumVar(0, INF, nm)
                     self.constraints[mp].SetCoefficient(self.E[s_u], -1)
+        """
+
+    def createReachNode(self, graph, start, end):
+        queue = list(start)
+        reach_node = [dict() for i in range(self.nodes)]
+        visited = [False] * self.nodes
+        while len(queue) != 0:
+            u = queue[0]
+            queue.pop(0)
+            if visited[u] == True:
+                continue
+            visited[u] = True
+            if u in end:
+                continue
+            for v, d, r, i, in graph[u]:
+                reach_node[v][u] = True
+                for uu in reach_node[u].keys():
+                    reach_node[v][uu] = True
+                queue.append(v)
+        return reach_node
 
     def createFlowConstraint(self):
         INF = self.solver.infinity()
+
+        # Flow in == Flow out
+        for s in self.source:
+            for d in self.destination:
+                for n in range(self.nodes):
+                    flow = ('Flow_in_out', s, d, n)
+                    self.constraints[flow] = self.solver.Constraint(0, 0) # s to d through n
+                    if n != s and n != d:
+                        # IN
+                        if n in self.reverse_graph:
+                            for u, d, r, i in self.reverse_graph[n]:
+                                edge = (u, n)
+                                key = (s, d, edge)
+                                nm = 'Flow_key('+str(s)+' to '+str(d)+','+str(edge)+')'
+                                if key not in self.f_k:
+                                    self.f_k[key] = self.solver.NumVar(0, INF, nm)
+                                self.constraints[flow].SetCoefficient(self.f_k[key], 1)
+                        # OUT
+                        if n in self.graph:
+                            for v, d, r, i in self.graph[n]:
+                                edge = (n, v)
+                                key = (s, d, edge)
+                                nm = 'Flow_key('+str(s)+' to '+str(d)+','+str(edge)+')'
+                                if key not in self.f_k:
+                                    self.f_k[key] = self.solver.NumVar(0, INF, nm)
+                                self.constraints[flow].SetCoefficient(self.f_k[key], -1)
+
+
+        # reach_d_node = self.createReachNode(self.reverse_graph, self.destination, self.source)
+        # reach_s_node = self.createReachNode(self.graph, self.source, self.destination)
+        # pprint(reach_d_node)
+        # pprint(reach_s_node)
 
     def createConstraints(self):
         self.createSecurityConstraint()
@@ -105,7 +188,7 @@ class SolverLP:
         self.createVariables()
         self.createConstraints()
         self.objective = self.solver.Objective()
-        print(self.solver.NumConstraints())
+        # print(self.solver.NumConstraints())
 
 
 def main():

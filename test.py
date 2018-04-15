@@ -65,8 +65,8 @@ def YNetwork(v1, v2):
 
   # print(solver.RowConstraint().GetCoefficient(k1))
   # print(solver.LookupConstraint('c1').GetCoefficient(k1))
-  print(dir(c9.this))
-
+  # print(dir(c9.this))
+  print(R1.name())
   # Solve the system.
   solver.Solve()
   opt_solution = R1.solution_value() + R2.solution_value()
@@ -82,4 +82,4 @@ def YNetwork(v1, v2):
 
 if __name__ == '__main__':
   print(YNetwork(2, 1))
-  print(YNetwork(1, 2))
+  # print(YNetwork(1, 2))
