@@ -126,38 +126,39 @@ class SolverLP:
                 out += (' + ' if plus else '') + self.k[s_e].name()
                 plus = True
             DEBUG(out)
-        """
+        DEBUG('--Summation of E from source--')
         for u in range(self.nodes):
             if u not in self.source:
                 # Constraint 6 Eu = Sum Eu from Si
                 mp = ('Sum_E_u', u)
                 self.constraints[mp] = self.solver.Constraint(0, 0)
                 self.constraints[mp].SetCoefficient(self.E[u], 1)
+                out = self.E[u].name() + ' = '
+                plus = False
                 for s in self.source:
                     s_u = (s, 'to', u)
                     nm = 'E_('+str(s)+' to '+str(u)+')'
                     self.E[s_u] = self.solver.NumVar(0, INF, nm)
                     self.constraints[mp].SetCoefficient(self.E[s_u], -1)
-        """
-
-    def createReachNode(self, graph, start, end):
-        queue = list(start)
-        reach_node = [dict() for i in range(self.nodes)]
-        visited = [False] * self.nodes
-        while len(queue) != 0:
-            u = queue[0]
-            queue.pop(0)
-            if visited[u] == True:
-                continue
-            visited[u] = True
-            if u in end:
-                continue
-            for v, d, r, i, in graph[u]:
-                reach_node[v][u] = True
-                for uu in reach_node[u].keys():
-                    reach_node[v][uu] = True
-                queue.append(v)
-        return reach_node
+                    out += (' + ' if plus else '') + self.E[s_u].name()
+                    plus = True
+                DEBUG(out)
+        DEBUG('--Summation of R from source--')
+        for u in range(self.nodes):
+            if u not in self.source:
+                mp = ('Sum_R_u', u)
+                self.constraints[mp] = self.solver.Constraint(0, 0)
+                self.constraints[mp].SetCoefficient(self.R[u], 1)
+                out = self.R[u].name() + ' = '
+                plus = False
+                for s in self.source:
+                    s_u = (s, 'to', u)
+                    nm = 'R_('+str(s)+' to '+str(u)+')'
+                    self.R[s_u] = self.solver.NumVar(0, INF, nm)
+                    self.constraints[mp].SetCoefficient(self.R[s_u], -1)
+                    out += (' + ' if plus else '') + self.R[s_u].name()
+                    plus = True
+                DEBUG(out)
 
     def createFlowConstraint(self):
         INF = self.solver.infinity()
@@ -218,12 +219,40 @@ class SolverLP:
         # Limit of Flow
         DEBUG('--Limit flow--')
         for s in self.source:
-            pass
-
-        # reach_d_node = self.createReachNode(self.reverse_graph, self.destination, self.source)
-        # reach_s_node = self.createReachNode(self.graph, self.source, self.destination)
-        # pprint(reach_d_node)
-        # pprint(reach_s_node)
+            mp = ('LM_Flow', s)
+            self.constraints[mp] = self.solver.Constraint(-INF, 0)
+            self.constraints[mp].SetCoefficient(self.E[s], -1)
+            out = ''
+            plus = False
+            for d in self.destination:
+                for v, de, re, i in self.graph[s]:
+                    edge = (s, v)
+                    key = (s, d, edge)
+                    self.constraints[mp].SetCoefficient(self.f_k[key], 1)
+                    out += (' + ' if plus else '') + self.f_k[key].name()
+                    plus = True
+            out += ' <= ' + self.E[s].name()
+            DEBUG(out)
+        
+        # Limit of E from Source i
+        DEBUG('--Limit random bits--')
+        for u in range(self.nodes):
+            if u not in self.source:
+                for s in self.source:
+                    s_u = (s, 'to', u)
+                    mp = ('LM_bits', s_u)
+                    self.constraints[mp] = self.solver.Constraint(-INF, 0)
+                    self.constraints[mp].SetCoefficient(self.E[s_u], 1)
+                    out = self.E[s_u].name() + ' <= '
+                    plus = False
+                    for d in self.destination:
+                        for v, de, re, i in self.reverse_graph[u]:
+                            edge = (v, u)
+                            key = (s, d, edge)
+                            self.constraints[mp].SetCoefficient(self.f_k[key], -1)
+                            out += (' + ' if plus else '') + self.f_k[key].name()
+                            plus = True
+                    DEBUG(out)
 
     def createConstraints(self):
         self.createSecurityConstraint()
