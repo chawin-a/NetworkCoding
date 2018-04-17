@@ -14,6 +14,7 @@ def YNetwork(v1, v2):
   k3 = solver.NumVar(0, solver.infinity(), 'k3')
   RP1 = solver.NumVar(0, solver.infinity(), 'RP1')
   RP2 = solver.NumVar(0, solver.infinity(), 'RP2')
+  val = [R1, R2, k1, k2, k3, RP1, RP2]
   d1, de1 = 0.2, 0.05
   d2, de2 = 0.3, 0.05
   d3, de3 = 0.25, 0.05
@@ -66,10 +67,13 @@ def YNetwork(v1, v2):
   # print(solver.RowConstraint().GetCoefficient(k1))
   # print(solver.LookupConstraint('c1').GetCoefficient(k1))
   # print(dir(c9.this))
-  print(R1.name())
+  # print(R1.name())
   # Solve the system.
   solver.Solve()
   opt_solution = R1.solution_value() + R2.solution_value()
+
+  for i in val:
+    print(i.name() + " : " + str(i.solution_value()))
   # print('Number of variables =', solver.NumVariables())
   # print('Number of constraints =', solver.NumConstraints())
   # The value of each variable in the solution.
@@ -81,5 +85,5 @@ def YNetwork(v1, v2):
   return R1.solution_value(), R2.solution_value()
 
 if __name__ == '__main__':
-  print(YNetwork(2, 1))
+  print(YNetwork(1, 10))
   # print(YNetwork(1, 2))

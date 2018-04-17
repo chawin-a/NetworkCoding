@@ -379,13 +379,17 @@ class SolverLP:
         self.objective.SetMaximization()
 
     def resultValue(self):
-        opt_sol = 0
-        for u in self.destination:
-            opt_sol += self.R[u].solution_value()
-        print('opt_solution =', opt_sol)
-        for var in [self.R, self.E, self.k, self.e, self.f_k, self.f_R]:
-            for k in var.keys():
-                print(var[k].name() + ' = ' + str(var[k].solution_value()))
+        if len(argv) > 1:
+            if argv[1] == 'debug':
+                opt_sol = 0
+                for u in self.destination:
+                    opt_sol += self.R[u].solution_value()
+                print('opt_solution =', opt_sol)
+                for var in [self.R, self.E, self.k, self.e, self.f_k, self.f_R]:
+                    for k in var.keys():
+                        print(var[k].name() + ' = ' + str(var[k].solution_value()))
+        else:
+            pass
 
     def Solve(self):
         self.createVariables()
@@ -393,10 +397,7 @@ class SolverLP:
         DEBUG(self.solver.NumConstraints())
         self.createObjective()
         self.solver.Solve()
-        if len(argv) > 1:
-            if argv[1] == 'debug':
-                self.resultValue()
-
+        self.resultValue()
 
 def main():
     g = dict()
