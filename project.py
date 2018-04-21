@@ -35,6 +35,8 @@ class SolverLP:
         self.graph = graph
         self.reverse_graph = reverse_graph
         self.s_to_d = s_to_d
+        self.createVariables()
+        self.createConstraints()
 
     def createVariables(self):
         INF = self.solver.infinity()
@@ -52,7 +54,18 @@ class SolverLP:
             self.e[edge] = self.solver.NumVar(0, INF, nm)
             nm = 'R_('+str(u)+','+str(v)+')'
             self.R[edge] = self.solver.NumVar(0, INF, nm)
-
+        
+        # Create Flow Variables
+        for s in self.source:
+            for d in range(self.nodes):
+                if d in self.source:
+                    continue
+                for u, v, de, re in self.edges:
+                    edge = (u, v)
+                    key = (s, d, edge)
+                    nm = 'f_k('+str(s)+' to '+str(d)+','+str(edge)+')'
+                    self.f_k[key] = self.solver.NumVar(0, INF, nm)
+        
     def createSecurityConstraint(self):
         INF = self.solver.infinity()
         DEBUG("==== Constraints on Edges ====")
@@ -178,16 +191,6 @@ class SolverLP:
 
     def createFlowConstraint(self):
         INF = self.solver.infinity()
-        # Create Flow Variables
-        for s in self.source:
-            for d in range(self.nodes):
-                if d in self.source:
-                    continue
-                for u, v, de, re in self.edges:
-                    edge = (u, v)
-                    key = (s, d, edge)
-                    nm = 'f_k('+str(s)+' to '+str(d)+','+str(edge)+')'
-                    self.f_k[key] = self.solver.NumVar(0, INF, nm)
 
         DEBUG("==== Flow Constraints ====")
         # Flow in == Flow out
@@ -376,7 +379,6 @@ class SolverLP:
                             plus = True
                     DEBUG(out)
 
-
     def createConstraints(self):
         self.createSecurityConstraint()
         self.createFlowConstraint()
@@ -401,8 +403,6 @@ class SolverLP:
             pass
 
     def Solve(self):
-        self.createVariables()
-        self.createConstraints()
         DEBUG(self.solver.NumConstraints())
         self.createObjective()
         self.solver.Solve()
