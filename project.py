@@ -178,11 +178,24 @@ class SolverLP:
 
     def createFlowConstraint(self):
         INF = self.solver.infinity()
+        # Create Flow Variables
+        for s in self.source:
+            for d in range(self.nodes):
+                if d in self.source:
+                    continue
+                for u, v, de, re in self.edges:
+                    edge = (u, v)
+                    key = (s, d, edge)
+                    nm = 'f_k('+str(s)+' to '+str(d)+','+str(edge)+')'
+                    self.f_k[key] = self.solver.NumVar(0, INF, nm)
+
         DEBUG("==== Flow Constraints ====")
         # Flow in == Flow out
         DEBUG('--Flow in == Flow out--')
         for s in self.source:
-            for d in self.destination:
+            for d in range(self.nodes):
+                if d in self.source:
+                    continue
                 for n in range(self.nodes):
                      # s to d through n
                     if n != s and n != d:
@@ -196,8 +209,6 @@ class SolverLP:
                                 edge = (u, n)
                                 key = (s, d, edge)
                                 nm = 'f_k('+str(s)+' to '+str(d)+','+str(edge)+')'
-                                if key not in self.f_k:
-                                    self.f_k[key] = self.solver.NumVar(0, INF, nm)
                                 self.constraints[flow].SetCoefficient(self.f_k[key], 1)
                                 out += (' + ' if plus else '') + self.f_k[key].name()
                                 plus = True
@@ -207,8 +218,6 @@ class SolverLP:
                                 edge = (n, v)
                                 key = (s, d, edge)
                                 nm = 'f_k('+str(s)+' to '+str(d)+','+str(edge)+')'
-                                if key not in self.f_k:
-                                    self.f_k[key] = self.solver.NumVar(0, INF, nm)
                                 self.constraints[flow].SetCoefficient(self.f_k[key], -1)
                                 out += ' - ' + self.f_k[key].name()
                         out += ' = 0'
@@ -218,37 +227,38 @@ class SolverLP:
         for s in self.source:
             for u, v, de, re in self.edges:
                 edge = (u, v)
-                mp = ('FlowCap', s, edge)
-                self.constraints[mp] = self.solver.Constraint(-INF, 0)
-                out = ''
-                plus = False
-                for d in self.destination:
+                for d in range(self.nodes):
+                    if d in self.source:
+                        continue
+                    mp = ('FlowCap', s, d, edge)
+                    self.constraints[mp] = self.solver.Constraint(-INF, 0)
                     key = (s, d, edge)
                     self.constraints[mp].SetCoefficient(self.f_k[key], 1)
-                    out += (' + ' if plus else '') + self.f_k[key].name()
-                    plus = True
-                s_e = (s, 'to', edge)
-                self.constraints[mp].SetCoefficient(self.k[s_e], -1/re)
-                self.constraints[mp].SetCoefficient(self.e[s_e], -1)
-                out += ' <= ' + show(1/re) + ' ' + self.k[s_e].name() + ' + ' + self.e[s_e].name()
-                DEBUG(out)
+                    out = self.f_k[key].name()
+                    s_e = (s, 'to', edge)
+                    self.constraints[mp].SetCoefficient(self.k[s_e], -1/re)
+                    self.constraints[mp].SetCoefficient(self.e[s_e], -1)
+                    out += ' <= ' + show(1/re) + ' ' + self.k[s_e].name() + ' + ' + self.e[s_e].name()
+                    DEBUG(out)
         # Limit of Flow
         DEBUG('--Limit flow--')
         for s in self.source:
-            mp = ('LM_Flow', s)
-            self.constraints[mp] = self.solver.Constraint(-INF, 0)
-            self.constraints[mp].SetCoefficient(self.E[s], -1)
-            out = ''
-            plus = False
-            for d in self.destination:
+            for d in range(self.nodes):
+                if d in self.source:
+                    continue
+                mp = ('LM_Flow', s, d)
+                self.constraints[mp] = self.solver.Constraint(-INF, 0)
+                self.constraints[mp].SetCoefficient(self.E[s], -1)
+                out = ''
+                plus = False
                 for v, de, re, i in self.graph[s]:
                     edge = (s, v)
                     key = (s, d, edge)
                     self.constraints[mp].SetCoefficient(self.f_k[key], 1)
                     out += (' + ' if plus else '') + self.f_k[key].name()
                     plus = True
-            out += ' <= ' + self.E[s].name()
-            DEBUG(out)
+                out += ' <= ' + self.E[s].name()
+                DEBUG(out)
         
         # Limit of E from Source i
         DEBUG('--Limit random bits--')
@@ -261,13 +271,12 @@ class SolverLP:
                     self.constraints[mp].SetCoefficient(self.E[s_u], 1)
                     out = self.E[s_u].name() + ' <= '
                     plus = False
-                    for d in self.destination:
-                        for v, de, re, i in self.reverse_graph[u]:
-                            edge = (v, u)
-                            key = (s, d, edge)
-                            self.constraints[mp].SetCoefficient(self.f_k[key], -1)
-                            out += (' + ' if plus else '') + self.f_k[key].name()
-                            plus = True
+                    for v, de, re, i in self.reverse_graph[u]:
+                        edge = (v, u)
+                        key = (s, u, edge)
+                        self.constraints[mp].SetCoefficient(self.f_k[key], -1)
+                        out += (' + ' if plus else '') + self.f_k[key].name()
+                        plus = True
                     DEBUG(out)
         
         # Flow_R in == Flow_R out
@@ -349,7 +358,7 @@ class SolverLP:
         
         # Limit of R from Source i
         DEBUG('--Limit messages--')
-        for u in range(self.nodes):
+        for u in self.destination:
             if u not in self.source:
                 for s in self.source:
                     s_u = (s, 'to', u)
