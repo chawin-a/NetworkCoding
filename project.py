@@ -19,16 +19,15 @@ class SolverLP:
     constraints = dict()
 
     # Variables
-    R = dict() # Messages in nodes
+    R = dict() # Messages
     k = dict() # Random bits k (on edges)
     e = dict() # Random bits e (on edges)
     E = dict() # Random bits in nodes
     f_k = dict() # Flow of Keys
     f_R = dict() # Flow of Messages
 
-    def __init__(self, nodes, num_edges, edges, source, destination, graph, reverse_graph, s_to_d, lim_s):
+    def __init__(self, nodes, edges, source, destination, graph, reverse_graph, s_to_d, lim_s):
         self.nodes = nodes
-        self.num_edges = num_edges
         self.edges = edges
         self.source = source
         self.destination = destination
@@ -36,8 +35,6 @@ class SolverLP:
         self.reverse_graph = reverse_graph
         self.s_to_d = s_to_d
         self.lim_s = lim_s
-        self.createVariables()
-        self.createConstraints()
 
     def createVariables(self):
         INF = self.solver.infinity()
@@ -410,50 +407,51 @@ class SolverLP:
             print('opt_solution =', opt_sol)
 
     def Solve(self):
+        self.createVariables()
+        self.createConstraints()
         DEBUG(self.solver.NumConstraints())
         self.createObjective()
         self.solver.Solve()
         self.resultValue()
 
 def main():
-    g = dict()
-    rg = dict()
-    source = []
-    destination = []
-    source_len = 0
-    des_len = 0
+    graph = dict()
+    reverse_graph = dict()
     nodes = int(input())
     edges = int(input())
     edge = []
-    s_to_d = []
     for i in range(edges):
         inp = input().split()
         u, v, d, r = int(inp[0]), int(inp[1]), float(inp[2]), float(inp[3])
         edge.append((u, v, d, r))
-        if u in g:
-            g[u].append((v, d, r, i))
+        if u in graph:
+            graph[u].append((v, d, r, i))
         else:
-            g[u] = [(v, d, r, i)]
-        if v in rg:
-            rg[v].append((u, d, r, i))
+            graph[u] = [(v, d, r, i)]
+        if v in reverse_graph:
+            reverse_graph[v].append((u, d, r, i))
         else:
-            rg[v] = [(u, d, r, i)]
+            reverse_graph[v] = [(u, d, r, i)]
 
-    source_len = int(input())
-    for i in range(source_len):
+    source = []
+    for i in range(int(input())):
         source.append(int(input()))
-    des_len = int(input())
-    for i in range(des_len):
+    
+    destination = []
+    for i in range(int(input())):
         destination.append(int(input()))
+    
+    s_to_d = []
     for i in range(int(input())):
         (s, d) = [int(x) for x in input().split()]
         s_to_d.append((s, d))
+    
     lim_s = dict()
     for i in range(int(input())):
         inp = input().split()
         lim_s[int(inp[0])] = float(inp[1])
 
-    solv = SolverLP(nodes, edges, edge, source, destination, g, rg, s_to_d, lim_s)
+    solv = SolverLP(nodes, edge, source, destination, graph, reverse_graph, s_to_d, lim_s)
     solv.Solve()
 
 if __name__ == '__main__':
