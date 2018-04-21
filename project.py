@@ -26,7 +26,7 @@ class SolverLP:
     f_k = dict() # Flow of Keys
     f_R = dict() # Flow of Messages
 
-    def __init__(self, nodes, num_edges, edges, source, destination, graph, reverse_graph, s_to_d):
+    def __init__(self, nodes, num_edges, edges, source, destination, graph, reverse_graph, s_to_d, lim_s):
         self.nodes = nodes
         self.num_edges = num_edges
         self.edges = edges
@@ -35,6 +35,7 @@ class SolverLP:
         self.graph = graph
         self.reverse_graph = reverse_graph
         self.s_to_d = s_to_d
+        self.lim_s = lim_s
         self.createVariables()
         self.createConstraints()
 
@@ -43,7 +44,10 @@ class SolverLP:
         # Variables in nodes
         for i in range(self.nodes):
             self.R[i] = self.solver.NumVar(0, INF, 'R_'+str(i))
-            self.E[i] = self.solver.NumVar(0, INF, 'E_'+str(i))
+            if i in self.lim_s:
+                self.E[i] = self.solver.NumVar(self.lim_s[i], self.lim_s[i], 'E_'+str(i))
+            else:
+                self.E[i] = self.solver.NumVar(0, INF, 'E_'+str(i))
         
         # Variables on edges
         for u, v, d, r in self.edges:
@@ -400,7 +404,10 @@ class SolverLP:
                     for k in var.keys():
                         print(var[k].name() + ' = ' + str(var[k].solution_value()))
         else:
-            pass
+            opt_sol = 0
+            for u in self.destination:
+                opt_sol += self.R[u].solution_value()
+            print('opt_solution =', opt_sol)
 
     def Solve(self):
         DEBUG(self.solver.NumConstraints())
@@ -439,8 +446,14 @@ def main():
     for i in range(des_len):
         destination.append(int(input()))
     for i in range(int(input())):
-        s_to_d.append((int(input()), int(input())))
-    solv = SolverLP(nodes, edges, edge, source, destination, g, rg, s_to_d)
+        (s, d) = [int(x) for x in input().split()]
+        s_to_d.append((s, d))
+    lim_s = dict()
+    for i in range(int(input())):
+        inp = input().split()
+        lim_s[int(inp[0])] = float(inp[1])
+
+    solv = SolverLP(nodes, edges, edge, source, destination, g, rg, s_to_d, lim_s)
     solv.Solve()
 
 if __name__ == '__main__':

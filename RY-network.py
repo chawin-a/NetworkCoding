@@ -6,9 +6,10 @@ def RYNetwork(v1, v2):
 
     V = ['k1', 'k2', 'k3', 'e', 'R1', 'R2']
     v = [None] * 6
-    for i in range(6):
+    for i in range(5):
         v[i] = solver.NumVar(0, solver.infinity(), V[i])
-    D0 = solver.NumVar(0.5, 0.5, 'D0')
+    v[5] = solver.NumVar(0, solver.infinity(), V[5])
+    D0 = solver.NumVar(0, solver.infinity(), 'D0')
     d = [0.1, 0.2, 0.3]
     de = [0.1, 0.05, 0.15]
 

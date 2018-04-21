@@ -72,8 +72,8 @@ def YNetwork(v1, v2):
   solver.Solve()
   opt_solution = R1.solution_value() + R2.solution_value()
 
-  for i in val:
-    print(i.name() + " = " + str(i.solution_value()))
+  # for i in val:
+  #   print(i.name() + " = " + str(i.solution_value()))
   # print('Number of variables =', solver.NumVariables())
   # print('Number of constraints =', solver.NumConstraints())
   # The value of each variable in the solution.
@@ -81,7 +81,7 @@ def YNetwork(v1, v2):
   # print('R1 = ', R1.solution_value())
   # print('R2 = ', R2.solution_value())
   # The objective value of the solution.
-  # print('Optimal objective value =', opt_solution)
+  print('Optimal objective value =', opt_solution)
   return R1.solution_value(), R2.solution_value()
 
 if __name__ == '__main__':
