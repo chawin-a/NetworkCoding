@@ -73,7 +73,7 @@ def YNetwork(v1, v2):
   opt_solution = R1.solution_value() + R2.solution_value()
 
   for i in val:
-    print(i.name() + " : " + str(i.solution_value()))
+    print(i.name() + " = " + str(i.solution_value()))
   # print('Number of variables =', solver.NumVariables())
   # print('Number of constraints =', solver.NumConstraints())
   # The value of each variable in the solution.
