@@ -26,7 +26,7 @@ class SolverLP:
     f_k = dict() # Flow of Keys
     f_R = dict() # Flow of Messages
 
-    def __init__(self, nodes, edges, source, destination, graph, reverse_graph, s_to_d, lim_s):
+    def __init__(self, nodes, edges, source, destination, graph, reverse_graph, s_to_d, lim_s, lim_R):
         self.nodes = nodes
         self.edges = edges
         self.source = source
@@ -35,12 +35,16 @@ class SolverLP:
         self.reverse_graph = reverse_graph
         self.s_to_d = s_to_d
         self.lim_s = lim_s
+        self.lim_R = lim_R
 
     def createVariables(self):
         INF = self.solver.infinity()
         # Variables in nodes
         for i in range(self.nodes):
-            self.R[i] = self.solver.NumVar(0, INF, 'R_'+str(i))
+            if i in self.lim_R:
+                self.R[i] = self.solver.NumVar(self.lim_R[i], self.lim_R[i], 'R_'+str(i))
+            else:
+                self.R[i] = self.solver.NumVar(0, INF, 'R_'+str(i))
             if i in self.lim_s:
                 self.E[i] = self.solver.NumVar(self.lim_s[i], self.lim_s[i], 'E_'+str(i))
             else:
@@ -451,7 +455,12 @@ def main():
         inp = input().split()
         lim_s[int(inp[0])] = float(inp[1])
 
-    solv = SolverLP(nodes, edge, source, destination, graph, reverse_graph, s_to_d, lim_s)
+    lim_R = dict()
+    for i in range(int(input())):
+        inp = input().split()
+        lim_R[int(inp[0])] = float(inp[1])
+
+    solv = SolverLP(nodes, edge, source, destination, graph, reverse_graph, s_to_d, lim_s, lim_R)
     solv.Solve()
 
 if __name__ == '__main__':
