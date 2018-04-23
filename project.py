@@ -11,10 +11,9 @@ def DEBUG(text):
         if argv[1] == 'debug':
             print(text)
 
-class SolverLP:
+class SolverLP:    
 
     solver = pywraplp.Solver('Network', pywraplp.Solver.GLOP_LINEAR_PROGRAMMING)
-    
     # Constraints
     constraints = dict()
 
@@ -410,6 +409,10 @@ class SolverLP:
                 opt_sol += self.R[u].solution_value()
             print('opt_solution =', opt_sol)
 
+    def clearConstraints(self):
+        for var in [self.R, self.E, self.k, self.e, self.f_k, self.f_R]:
+            var.clear()
+
     def Solve(self):
         self.createVariables()
         self.createConstraints()
@@ -417,6 +420,31 @@ class SolverLP:
         self.createObjective()
         self.solver.Solve()
         self.resultValue()
+        ret = []
+        for s, d in self.s_to_d:
+            opt = 0
+            for u, de, re, i in self.reverse_graph[d]:
+                edge = (u, d)
+                key = (s, d, edge)
+                opt += self.f_R[key].solution_value()
+            ret.append(opt)
+        return ret
+   
+    def edgesWeight(self):
+        ret = []
+        for u, v, de, re in self.edges:
+            k = 0
+            for s, d in self.s_to_d:
+                edge = (u, v)
+                key = (s, d, edge)
+                k += self.f_R[key].solution_value()
+            ret.append(k)
+        return ret
+
+    def Clear(self):
+        self.solver.Clear()
+        self.clearConstraints()
+        
 
 def main():
     graph = dict()
@@ -461,7 +489,8 @@ def main():
         lim_R[int(inp[0])] = float(inp[1])
 
     solv = SolverLP(nodes, edge, source, destination, graph, reverse_graph, s_to_d, lim_s, lim_R)
-    solv.Solve()
+    print(solv.Solve())
+    solv.Clear()
 
 if __name__ == '__main__':
     main()

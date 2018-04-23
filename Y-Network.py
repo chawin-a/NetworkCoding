@@ -8,6 +8,7 @@ def YNetwork(v1, v2):
 
 # Create the two variables and let them take on any value.
   R1 = solver.NumVar(0, solver.infinity(), 'R1')
+  # R1 = solver.NumVar(0, solver., 'R1')
   R2 = solver.NumVar(0, solver.infinity(), 'R2')
   k1 = solver.NumVar(0, solver.infinity(), 'k1')
   k2 = solver.NumVar(0, solver.infinity(), 'k2')
@@ -70,6 +71,7 @@ def YNetwork(v1, v2):
   # print(R1.name())
   # Solve the system.
   solver.Solve()
+  # print(dir(c9))
   opt_solution = R1.solution_value() + R2.solution_value()
 
   # for i in val:
