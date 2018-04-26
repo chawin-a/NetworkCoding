@@ -72,7 +72,7 @@ class SolverLP:
         
     def createSecurityConstraint(self):
         INF = self.solver.infinity()
-        DEBUG("==== Constraints on Edges ====")
+        DEBUG("==== Security Constraints ====")
         DEBUG('--Key--')
         for u, v, d, r in self.edges:
             edge = (u, v)
