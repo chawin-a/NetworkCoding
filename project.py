@@ -337,6 +337,9 @@ class SolverLP:
                 plus = False
                 for d in to[s]:
                     key = (s, d, edge)
+                    if key not in self.f_R:
+                        nm = 'f_R('+str(s)+' to '+str(d)+','+str(edge)+')'
+                        self.f_R[key] = self.solver.NumVar(0, INF, nm)
                     self.constraints[mp].SetCoefficient(self.f_R[key], 1)
                     out += (' + ' if plus else '') + self.f_R[key].name()
                     plus = True
@@ -399,7 +402,7 @@ class SolverLP:
                 opt_sol = 0
                 for u in self.destination:
                     opt_sol += self.R[u].solution_value()
-                print('opt_solution =', opt_sol)
+                print('Optimal objective value =', opt_sol)
                 for var in [self.R, self.E, self.k, self.e, self.f_k, self.f_R]:
                     for k in var.keys():
                         print(var[k].name() + ' = ' + str(var[k].solution_value()))
@@ -407,7 +410,7 @@ class SolverLP:
             opt_sol = 0
             for u in self.destination:
                 opt_sol += self.R[u].solution_value()
-            print('opt_solution =', opt_sol)
+            print('Optimal objective value =', opt_sol)
 
     def clearConstraints(self):
         for var in [self.R, self.E, self.k, self.e, self.f_k, self.f_R]:
@@ -416,7 +419,7 @@ class SolverLP:
     def Solve(self):
         self.createVariables()
         self.createConstraints()
-        DEBUG(self.solver.NumConstraints())
+        DEBUG('Number of Constraints = ' + str(self.solver.NumConstraints()))
         self.createObjective()
         self.solver.Solve()
         self.resultValue()

@@ -9,7 +9,7 @@ def RYNetwork(v1, v2):
     for i in range(5):
         v[i] = solver.NumVar(0, solver.infinity(), V[i])
     v[5] = solver.NumVar(0, solver.infinity(), V[5])
-    D0 = solver.NumVar(0, solver.infinity(), 'D0')
+    D0 = solver.NumVar(0.4, 0.4, 'D0')
     d = [0.1, 0.2, 0.3]
     de = [0.1, 0.05, 0.15]
 
@@ -112,8 +112,8 @@ def RYNetwork(v1, v2):
 
     solver.Solve()
     opt_solution = v[4].solution_value() + v[5].solution_value()
-    print(opt_solution)
-    return v[4].solution_value(), v[5].solution_value()
+    print('Optimal objective value =', opt_solution)
+    return [v[4].solution_value(), v[5].solution_value()]
 
 if __name__ == '__main__':
     print(RYNetwork(1, 1))

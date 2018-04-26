@@ -73,7 +73,7 @@ def XNetwork():
   # Solve the system.
   solver.Solve()
   opt_solution = R[0].solution_value() + R[1].solution_value()
-  print(opt_solution)
+  print('Optimal objective value =', opt_solution)
   # print('Number of variables =', solver.NumVariables())
   # print('Number of constraints =', solver.NumConstraints())
   # The value of each variable in the solution.
@@ -82,7 +82,7 @@ def XNetwork():
   # print('R2 = ', R2.solution_value())
   # The objective value of the solution.
   # print('Optimal objective value =', opt_solution)
-  return R[0].solution_value(), R[1].solution_value()
+  return [R[0].solution_value(), R[1].solution_value()]
 
 if __name__ == '__main__':
   print(XNetwork())

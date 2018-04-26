@@ -84,8 +84,8 @@ def YNetwork(v1, v2):
   # print('R2 = ', R2.solution_value())
   # The objective value of the solution.
   print('Optimal objective value =', opt_solution)
-  return R1.solution_value(), R2.solution_value()
+  return [R1.solution_value(), R2.solution_value()]
 
 if __name__ == '__main__':
-  print(YNetwork(1, 10))
+  print(YNetwork(1, 1))
   # print(YNetwork(1, 2))
